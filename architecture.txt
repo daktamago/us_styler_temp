@@ -1,0 +1,10 @@
+<Target IQ>  --[ 128 > 256 > 256 Shared Encoder ]--\
+                                                    [Subtractor] --[ 256 > 256 > 128 > 37 Regressor ]-- <Output (전체 37개)>
+<Current IQ> --[ 128 > 256 > 256 Shared Encoder ]--/
+
+
+
+<Target IQ>  --[ 128 > 256 > 256 Shared Encoder ]--\
+                                                    [Subtractor] --[ 256 > 256 > 128 Base Extractor ]-┬- [ 128 > n Regressor Head ] ----- <Output (Reg 그룹)>
+<Current IQ> --[ 128 > 256 > 256 Shared Encoder ]--/                                                  |
+                                                                                                      └- [ 128 > K_1, K_2... Classifier Heads ] - <Output (Cls 그룹)>
