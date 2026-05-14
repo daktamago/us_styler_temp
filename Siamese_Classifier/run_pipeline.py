@@ -11,7 +11,7 @@ def main():
     ref_file = input("3. Ref 파일 (기본 ParameterMinMaxStep.csv): ") or "ParameterMinMaxStep.csv"
     iq_dim = int(input("4. IQ 개수 (기본 80): ") or 80)
     hid_dims = [int(x) for x in (input("5. Encoder 차원 (기본 512,1024,1024): ") or "512,1024,1024").split(',')]
-    ext_dims = [int(x) for x in (input("6. Extractor 차원 (기본 256,128): ") or "256,128").split(',')]
+    ext_dims = [int(x) for x in (input("6. Extractor 차원 (기본 256,256,128): ") or "256,256,128").split(',')]
     cls_dims = [int(x) for x in (input("7. Classifier Head 차원 (기본 128): ") or "128").split(',')]
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
