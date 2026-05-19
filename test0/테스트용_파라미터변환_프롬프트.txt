@@ -1,0 +1,113 @@
+아래의 조건을 만족하는 파이썬 코드 작성
+CLI 기반으로 아래와 같은 커맨드로 동작하도록 작성. (ouput_json_path는 필수 아님. 미입력시 코드 실행 폴더에 기본파일명으로 저장하도록)
+python 코드.py <input_json_path> <rawdata_path> <output_json_path>
+
+
+목적 : 4개 파라미터 값을 기반으로 관련된 이미지 파라미터의 차이를 학습된 모델을 통해 추론
+
+입력 : 4개의 파라미터 값이 들어있는 Json 파일, raw 이미지 파일, IQ Parameter Min&Max&Step 정보 파일, 학습model(Siamese 구조), 스케일러
+#주의사항1 : 학습model은 2개. 각각 model_regressor.pth, model_classifier.pth
+#주의사항2 : 스케일러는 scaler_x.pkl
+모델 및 스케일로 모두 pytorch로 제작
+
+출력 : 추론된 style parameter difference (Δstyle)의 Json파일
+
+참고파일 : 첨부된 iq parameter 계산 코드 (new_param_cal.py)
+
+[4개의 기본 파라미터]
+Speckle_Reduction
+Contrast_Enhancement
+Edge_Enhancement
+Gain_Increment
+*값의 범위
+>Relative Mode : -5 ~ +5 사이의 정수
+
+
+[입력 Json 파일의 양식]
+{
+    "Speckle_Reduction": 5,
+    "Contrast_Enhancement": 0,
+    "Edge_Enhancement": -2,
+    "Gain_Increment": 3
+}
+
+
+[출력 Json 파일의 양식]
+{
+    "Edge Threshold-Lv2": 0.0019,
+    "Edge Threshold-Lv3": 0.0019,
+    "LapSmoothRate-Lv2": 25,
+
+    ...
+
+    "Adaptive Edge Smooth": 0,
+    "Adaptive Edge Contrast": 0,
+    "DecompositionType": 1,
+    "LimitationType": 0,
+    "DirPosition-Lv2": 2
+}
+
+
+[코드의 구성]
+1. Json 파일 로드 > 4개의 profile 추출
+2. IQ 파라미터 Mapping
+======================
+"Speckle_Reduction": ["SNR", "Speckle Index", "Homogeneity", "Non-Edge_CV"],
+"Contrast_Enhancement": ["RMS Contrast", "Contrast-Weber", "ST-Ten"],
+"Edge_Enhancement": ["Sharpness(Laplacian)", "Sharpness(Brenner)", "Connectivity-Num_Objects", "Connectivity-Avg_Size", "Connectivity-Largest_Ratio", "Gradient_X", "Gradient_Y"],
+"Gain_Increment": ["Brightness-Median_8bit_fixed", "Brightness-Mode_8bit_fixed", "Brightness-2nd Mode_8bit_fixed", "Brightness-Percentile_25th_8bit_fixed", "Brightness-Percentile_75th_8bit_fixed", "Gradient_90th_Percentile"]
+======================
+각 파라미터는 "IQ Parameter Min&Max&Step 정보 파일" 참고해서 연동.
+각 파라미터의 1Step 값 : (Max-Min)/5
+예시) "Speckle_Reduction" 파라미터가 2로 결정 >> "SNR", "Speckle Index", "Homogeneity", "Non-Edge_CV" 각각 {1Step × 2}에 해당하는 차이값(Δiq) 부여. "Speckle_Reduction" 파라미터가 -2일 경우에는 반대로, {{1Step × -2} 부여
+
+3. Raw 파일 로드 > IQ 파라미터(IQ_ref) 계산.  iq parameter 계산 코드 참조
+4. 4개의 profile 값에 따른 IQ 파라미터 차이값(Δiq) 산출
+5. IQ_ref 와 Δiq 더함. 최종 IQ(IQ_mod) 산출
+6. IQ_ref & IQ_mod 를 model의 입력으로 투입. Δstyle 값 추론. 이 때, model_classifer 및 model_regressor 를 이용해서 추론하는 Δstyle 대상이 다름.
+model_classifer의 추론 대상 : NR Strength-Lv2, NR Strength-Lv3, NR Curve Threshold-Lv0, NR Curve Threshold-Lv1, NR Curve Strength-Lv0, NR Curve Strength-Lv1, DecompositionType, LimitationType, DirPosition-Lv2
+model_regressor의 추론 대상 : 그 외 나머지 
+
+Json 파일로 저장.
+
+
+
+
+
+
+============================
+
+
+첨부한 코드의 수정이 필요.
+
+현재 코드의 역할.
+
+
+1. 입력된 json 파일 로드 
+2. json 파일에 쓰여진 parameter 인식
+3. 읽은 패러미터와 코드에 명시된 패러미터를 IQ Factor에 mapping ("quality_to_metrics"), 관련파일(ActiveIQFactorsMinMax.xlsx) 참조해서 value scale 맞춰서 mapping
+4. mapping 완료된 IQ Factor를 각각(regressor, classifier)의 모델에 입력으로 넣기. 추론 수행. 결과 파라미터(Style Parameter) 산출
+5. 결과 파라미터를 json 파일로 저장.
+
+
+수정이 필요한 부분.
+1. 학습된 모델이 TensorFlow(.h5)가 아닌, Pytorch(.pth)를 기반으로 만들어짐. scaler 확장자 역시 ".pkl" 이 형식에 맞게 수정.
+
+
+
+
+
+
+
+
+
+추가되는 파라미터들 존재.
+ 추가 파라미터 1 : Gradient_X
+ 추가 파라미터 2 : Gradient_Y
+ 추가 파라미터 3 : Gradient_90th_Percentile
+ 추가 파라미터 4 : Non-Edge_CV
+ 추가 파라미터 5 : ST-Ten
+
+각 분류에 맞게 맵핑 추가
+
+
